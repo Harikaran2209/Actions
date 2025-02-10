@@ -1,0 +1,33 @@
+name: Deploy and Modify Config
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Modify Configuration File
+        run: |
+          echo "Updating config file..."
+          sed -i 's/localhost/192.168.1.1/' config.json
+          cat config.json
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add config.json
+          git commit -m "Updated configuration file dynamically"
+          git push origin main
+
+      - name: Set Up Docker and Run Apache
+        run: |
+          docker build -t my-apache-server .
+          docker run -d -p 80:80 my-apache-server
