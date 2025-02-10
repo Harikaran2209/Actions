@@ -1,9 +1,9 @@
-name: Deploy and Modify Config
+name: Deploy Application
 
 on:
   push:
     branches:
-      - main
+      - main  # Trigger the workflow on push to the main branch
 
 jobs:
   deploy:
@@ -13,21 +13,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Modify Configuration File
+      - name: Deploy Code
         run: |
-          echo "Updating config file..."
-          sed -i 's/localhost/192.168.1.1/' config.json
-          cat config.json
+          echo "Deploying code..."
+          ls -la
 
-      - name: Commit and Push Changes
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add config.json
-          git commit -m "Updated configuration file dynamically"
-          git push origin main
-
-      - name: Set Up Docker and Run Apache
-        run: |
-          docker build -t my-apache-server .
-          docker run -d -p 80:80 my-apache-server
