@@ -5,9 +5,6 @@ on:
     branches:
       - master
 
-permissions:
-  contents: write  # ✅ Grants write access for commit & push
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -19,29 +16,26 @@ jobs:
       - name: Modify Configuration File
         run: |
           echo "Updating config file..."
-          if [ -f config.json ]; then
-            sed -i 's/@url@/localhost/' config.json
-            cat config.json
-         
+          sed -i 's/@url@/localhost/' config.json
+          cat config.json
       - name: Copy index.html to Apache Directory
         run: |
-          if [ -f index.html ]; then
-            sudo cp index.html /var/www/html/index.html
-            sudo systemctl restart apache2
-          
-      - name: Commit and Push Changes
-        env:
+          sudo cp index.html /var/www/html/index.html
+          sudo systemctl restart apache2
+
+       - name: Commit and Push Changes
+         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
+         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-
-          # Ensure there are changes before committing
-          if git diff --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-
-          git add config.json
-          git commit -m "Updated configuration file dynamically"
-          git push origin master
+    
+         # Ensure there are changes before committing
+         if git diff --quiet; then
+          echo "No changes to commit"
+          exit 0
+         fi
+    
+        git add config.json
+        git commit -m "Updated configuration file dynamically"
+        git push origin master
