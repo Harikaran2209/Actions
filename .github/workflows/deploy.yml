@@ -1,4 +1,4 @@
-name: Deploy and Modify Config
+name: Deploy and Configure Apache
 
 on:
   push:
@@ -13,17 +13,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Create a Sample Config File (if not exists)
-        run: |
-          echo "Checking if config.json exists..."
-          [ -f config.json ] || echo '{ "host": "localhost", "port": "8000" }' > config.json
-          cat config.json
-
       - name: Modify Configuration File
         run: |
           echo "Updating config file..."
-          sed -i 's/localhost/192.168.1.1/' config.json
-          cat config.json
+          sed -i 's/@url@/localhost/' config.yml
+          cat config.yml
+
+      - name: Copy index.html to Apache Directory
+        run: |
+          sudo cp index.html /var/www/html/index.html
+          sudo systemctl restart apache2
 
       - name: Commit and Push Changes
         env:
@@ -31,20 +30,6 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git add config.json
+          git add config.yml
           git commit -m "Updated configuration file dynamically" || echo "No changes to commit"
           git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Harikaran2209/Actions.git master
-
-      - name: Install Docker
-        run: |
-          sudo apt update
-          sudo apt install -y docker.io
-          sudo systemctl start docker
-          sudo systemctl enable docker
-
-      - name: Build and Run Apache in Docker
-        run: |
-          echo '<html><body><h1>Hello from Apache</h1></body></html>' > index.html
-          echo "FROM httpd:latest\nCOPY ./index.html /usr/local/apache2/htdocs/" > Dockerfile
-          docker build -t my-apache-server .
-          docker run -d -p 80:80 my-apache-server
