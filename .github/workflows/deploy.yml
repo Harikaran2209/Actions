@@ -29,5 +29,5 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git add config.json
           git commit -m "Ensured 'localhost' remains in config.json" || echo "No changes to commit"
-          git push origin master
+          git push https://x-access-token:${GH_TOKEN}@github.com/Harikaran2209/Actions.git master
 
