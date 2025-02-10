@@ -30,4 +30,3 @@ jobs:
           git add config.json
           git commit -m "Ensured 'localhost' remains in config.json" || echo "No changes to commit"
           git push https://x-access-token:${GH_TOKEN}@github.com/Harikaran2209/Actions.git master
-
