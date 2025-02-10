@@ -8,12 +8,12 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Ensure Config File Exists
+      - name: Create a Sample Config File (if not exists)
         run: |
           echo "Checking if config.json exists..."
           [ -f config.json ] || echo '{ "host": "localhost", "port": "8000" }' > config.json
@@ -33,7 +33,7 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git add config.json
           git commit -m "Updated configuration file dynamically" || echo "No changes to commit"
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Harikaran2209/GitHub-Actions.git master
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Harikaran2209/Actions.git master
 
       - name: Install Docker
         run: |
