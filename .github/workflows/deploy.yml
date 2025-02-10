@@ -17,3 +17,17 @@ jobs:
       - name: Show Repository Files
         run: ls -la
 
+      - name: Modify Configuration File
+        run: |
+          echo "Ensuring 'localhost' is set in config file..."
+          sed -i 's/"server": "[^"]*"/"server": "localhost"/' config.json  # Ensure server remains 'localhost'
+          cat config.json  # Display the file content
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add config.json
+          git commit -m "Ensured 'localhost' remains in config.json" || echo "No changes to commit"
+          git push origin main
+
