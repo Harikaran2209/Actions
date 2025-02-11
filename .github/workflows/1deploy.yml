@@ -10,11 +10,11 @@ on:
       deploy_dev:
         description: "Deploy to Dev branch (Set to true to deploy)"
         required: false
-        default: "true"
+        default: "false"
       deploy_test:
         description: "Deploy to Test branch (Set to true to deploy)"
         required: false
-        default: "true"
+        default: "false"
 
 jobs:
   deploy:
@@ -24,19 +24,15 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v3
       with:
-        fetch-depth: 0  # Fetch all branches and history
+        fetch-depth: 0  
 
     - name: Determine Target Branch
       run: |
-        # Default to master
         TARGET_BRANCH="master"
 
-        # Override based on user input
-        if [[ "${{ github.event.inputs.deploy_dev }}" == "true" ]]; then
+        if [ "${{ github.event.inputs.deploy_dev }}" == "true" ]; then
           TARGET_BRANCH="Dev"
-        fi
-
-        if [[ "${{ github.event.inputs.deploy_test }}" == "true" ]]; then
+        elif [ "${{ github.event.inputs.deploy_test }}" == "true" ]; then
           TARGET_BRANCH="Test"
         fi
 
@@ -54,9 +50,10 @@ jobs:
         fi
 
     - name: Checkout Target Branch
-      run: git checkout $TARGET_BRANCH
+      run: |
+        git checkout $TARGET_BRANCH
 
-    - name: Commit and Push Changes (if any)
+    - name: Commit and Push Changes
       run: |
         git add .
         if git diff --staged --quiet; then
