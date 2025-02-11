@@ -32,5 +32,5 @@ jobs:
     - name: Push Changes to Dev Branch
       run: |
         git branch -M Dev  # Ensure we are on Dev branch
-        git remote set-url origin https://x-access-token:${{ secrets.PAT }}@github.com/Harikaran2209/Dev.git
+        git remote set-url origin https://x-access-token:${{ secrets.PAT }}@github.com/Harikaran2209/Actions.git
         git push origin Dev
