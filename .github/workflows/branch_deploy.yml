@@ -1,48 +1,40 @@
-name: Manual Branch Selection & Deployment
+name: Auto-Deploy on Commit
 
 on:
   workflow_dispatch:
     inputs:
       target_branch:
-        description: "Select the target branch to deploy (Dev or Test)"
+        description: "Select branch to deploy (Dev or Test)"
         required: true
         default: "Dev"
 
 jobs:
-  select-branch:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Display Branch Selection
-        run: echo "You selected the branch:${{ github.event.inputs.target_branch }}"
-
   deploy:
-    needs: select-branch  # Waits for branch selection to complete
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Fetch all branches
+          fetch-depth: 0  # Fetch all history and branches
 
       - name: Set Target Branch
         run: |
-          echo "TARGET_BRANCH=${{ github.event.inputs.target_branch }}" >> $GITHUB_ENV
-          echo "Selected target branch: ${{ github.event.inputs.target_branch }}"
-      
+          TARGET_BRANCH=${{ github.event.inputs.target_branch }}
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> $GITHUB_ENV
+          echo "Selected target branch: $TARGET_BRANCH"
       - name: Ensure Target Branch Exists
         run: |
-          if git ls-remote --exit-code --heads origin $TARGET_BRANCH; then
+          if git show-ref --verify --quiet refs/remotes/origin/$TARGET_BRANCH; then
             echo "Branch $TARGET_BRANCH exists."
           else
             echo "Branch $TARGET_BRANCH does not exist. Creating..."
             git checkout -b $TARGET_BRANCH
             git push origin $TARGET_BRANCH
           fi
-      
       - name: Checkout Target Branch
-        run: git checkout $TARGET_BRANCH
-
+        run: |
+          git checkout $TARGET_BRANCH
       - name: Commit and Push Changes
         run: |
           git config --global user.email "actions@github.com"
@@ -51,3 +43,4 @@ jobs:
           git add welcome.txt
           git commit -m "Updated welcome.txt from $TARGET_BRANCH branch" || echo "No changes to commit"
           git push origin $TARGET_BRANCH
+
