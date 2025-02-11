@@ -34,7 +34,9 @@ jobs:
         # Override based on user input
         if [[ "${{ github.event.inputs.deploy_dev }}" == "true" ]]; then
           TARGET_BRANCH="Dev"
-        elif [[ "${{ github.event.inputs.deploy_test }}" == "true" ]]; then
+        fi
+
+        if [[ "${{ github.event.inputs.deploy_test }}" == "true" ]]; then
           TARGET_BRANCH="Test"
         fi
 
