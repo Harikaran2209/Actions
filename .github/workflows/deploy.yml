@@ -19,11 +19,7 @@ jobs:
           if [ -f config.json ]; then
             sed -i 's|@url@|${{ secrets.APP_URL }}|' config.json
             cat config.json
-          else
-            echo "Error: config.json not found!"
-            exit 1
-          fi
-
+          
       - name: Copy index.html to Apache Directory
         run: |
           sudo cp index.html /var/www/html/index.html
