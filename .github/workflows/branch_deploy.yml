@@ -1,0 +1,49 @@
+name: Deploy Code
+
+on:
+  workflow_dispatch:  # Manual trigger with input
+    inputs:
+      target_branch:
+        description: 'Branch to deploy (default: master)'
+        required: false
+        default: 'Dev'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all branches
+
+      - name: Set Target Branch
+        run: echo "TARGET_BRANCH=${{ github.event.inputs.target_branch || 'Dev' }}" >> $GITHUB_ENV
+
+      - name: Check if Branch Exists
+        id: check_branch
+        run: |
+          if git ls-remote --heads origin $TARGET_BRANCH | grep $TARGET_BRANCH; then
+            echo "BRANCH_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "BRANCH_EXISTS=false" >> $GITHUB_ENV
+          fi
+
+      - name: Deploy Code
+        run: |
+          echo "Deploying code to $TARGET_BRANCH branch..."
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+          # Ensure correct branch is checked out
+          if [ "$BRANCH_EXISTS" = "true" ]; then
+            git checkout $TARGET_BRANCH
+          else
+            git checkout -b $TARGET_BRANCH
+          fi
+
+          # Commit and push changes
+          git add .
+          git commit -m "Deployed via GitHub Actions"
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/YOUR_USERNAME/YOUR_REPO.git $TARGET_BRANCH
