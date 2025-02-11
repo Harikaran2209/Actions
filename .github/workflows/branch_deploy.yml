@@ -1,20 +1,29 @@
-name: Auto-Deploy on Commit
+name: Manual Branch Selection & Deployment
 
 on:
   workflow_dispatch:
     inputs:
       target_branch:
-        description: "Select branch to deploy (Dev or Test)"
+        description: "Select the target branch to deploy (Dev or Test)"
         required: true
-        default: "master"
+        default: "Dev"
 
 jobs:
+  select-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Display Branch Selection
+        run: echo "You selected the branch: ${{ github.event.inputs.target_branch }}"
+
   deploy:
+    needs: select-branch  # Waits for branch selection to complete
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all branches
 
       - name: Set Target Branch
         run: |
@@ -22,14 +31,24 @@ jobs:
           echo "TARGET_BRANCH=$TARGET_BRANCH" >> $GITHUB_ENV
           echo "Selected target branch: $TARGET_BRANCH"
 
-      - name: Checkout Target Branch
+      - name: Ensure Target Branch Exists
         run: |
-          git checkout -B $TARGET_BRANCH origin/$TARGET_BRANCH || git checkout $TARGET_BRANCH
+          if git show-ref --verify --quiet refs/remotes/origin/$TARGET_BRANCH; then
+            echo "Branch $TARGET_BRANCH exists."
+          else
+            echo "Branch $TARGET_BRANCH does not exist. Creating..."
+            git checkout -b $TARGET_BRANCH
+            git push origin $TARGET_BRANCH
+          fi
+
+      - name: Checkout Target Branch
+        run: git checkout $TARGET_BRANCH
 
       - name: Commit and Push Changes
         run: |
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
+          echo "Welcome to GitHub Actions in $TARGET_BRANCH branch" > welcome.txt
           git add welcome.txt
           git commit -m "Updated welcome.txt from $TARGET_BRANCH branch" || echo "No changes to commit"
           git push origin $TARGET_BRANCH
