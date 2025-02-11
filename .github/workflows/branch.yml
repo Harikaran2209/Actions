@@ -22,3 +22,8 @@ jobs:
             echo "Starting the process..."
             # Add your start logic here
           elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
+            echo "Stopping the process..."
+            # Add your stop logic here
+          else
+            echo "Invalid action selected."
+          fi
