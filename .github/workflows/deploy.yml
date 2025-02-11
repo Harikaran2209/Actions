@@ -17,7 +17,7 @@ jobs:
         run: |
           echo "Updating config file..."
           if [ -f config.json ]; then
-            sed -i 's|@url@|localhost|' config.json
+            sed -i 's|@url@|${{ secrets.APP_URL }}|' config.json
             cat config.json
           else
             echo "Error: config.json not found!"
