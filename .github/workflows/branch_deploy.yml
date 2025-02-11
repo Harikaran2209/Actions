@@ -18,7 +18,11 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v3
       with:
-        ref: ${{ github.ref_name }}
+        ref: Dev  # Always checkout Dev branch
+
+    - name: Pull latest changes
+      run: |
+        git pull origin Dev --rebase  # Pull latest changes before modifying files
 
     - name: Modify the Branch
       run: |
@@ -31,6 +35,4 @@ jobs:
 
     - name: Push Changes to Dev Branch
       run: |
-        git branch -M Dev  # Ensure we are on Dev branch
-        git remote set-url origin https://x-access-token:${{ secrets.PAT }}@github.com/Harikaran2209/Actions.git
         git push origin Dev
