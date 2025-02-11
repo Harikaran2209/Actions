@@ -3,49 +3,53 @@ name: Auto-Deploy on Commit
 on:
   push:
     branches:
-      - master  # Only trigger when changes happen in master
+      - master  # Trigger workflow when master branch is updated
+  workflow_dispatch:  # Enables manual trigger (blue popup)
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Determine Target Branch
-      run: |
-        # Decide target branch based on a condition
-        # Example: If the commit message contains "deploy to test", push to Test
-        # Otherwise, push to Dev
-        TARGET_BRANCH="Dev"
-        if git log -1 --pretty=%B | grep -q "deploy to test"; then
-          TARGET_BRANCH="Test"
-        fi
-        echo "Target branch: $TARGET_BRANCH"
-        echo "TARGET_BRANCH=$TARGET_BRANCH" >> $GITHUB_ENV
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-    - name: Checkout Repository (master)
-      uses: actions/checkout@v3
-      with:
-        ref: master
+      - name: Determine Target Branch
+        id: set_branch
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Commit message: $COMMIT_MSG"
+          
+          # Logic to decide target branch
+          if [[ "$COMMIT_MSG" == *"[deploy-test]"* ]]; then
+            TARGET_BRANCH="Test"
+          else
+            TARGET_BRANCH="Dev"
+          fi
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> $GITHUB_ENV
+          echo "Target branch set to: $TARGET_BRANCH"
 
-    - name: Pull latest changes
-      run: |
-        git pull origin master --rebase  
+      - name: Checkout Target Branch
+        run: |
+          git fetch origin $TARGET_BRANCH
+          git checkout -B $TARGET_BRANCH origin/$TARGET_BRANCH
 
-    - name: Create Notepad File
-      run: |
-        echo "Welcome to GitHub Actions (Harikaran2209) in $TARGET_BRANCH branch" > welcome.txt  
-        cat welcome.txt  # Verify content
+      - name: Pull Latest Changes
+        run: |
+          git pull origin $TARGET_BRANCH --rebase || echo "No changes to rebase"
 
-    - name: Commit Changes
-      run: |
-        git config --global user.email "actions@github.com"
-        git config --global user.name "GitHub Actions"
-        git add welcome.txt
-        git commit -m "Added welcome.txt from master branch commit" || echo "No changes to commit"
+      - name: Create/Update Notepad File
+        run: |
+          echo "Welcome to GitHub Actions in $TARGET_BRANCH branch" > welcome.txt
+          cat welcome.txt  # Verify content
 
-    - name: Push Changes to Target Branch
-      run: |
-        git checkout -b $TARGET_BRANCH || git checkout $TARGET_BRANCH
-        git pull origin $TARGET_BRANCH --rebase
-        git merge master  # Merge latest changes from master
-        git push origin $TARGET_BRANCH
+      - name: Commit Changes
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add welcome.txt
+          git commit -m "Updated welcome.txt from master commit" || echo "No changes to commit"
+
+      - name: Push Changes to Target Branch
+        run: |
+          git push origin $TARGET_BRANCH
