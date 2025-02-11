@@ -27,20 +27,19 @@ jobs:
 
       - name: Set Target Branch
         run: |
-          TARGET_BRANCH=${{ github.event.inputs.target_branch }}
-          echo "TARGET_BRANCH=$TARGET_BRANCH" >> $GITHUB_ENV
-          echo "Selected target branch: $TARGET_BRANCH"
-
+          echo "TARGET_BRANCH=${{ github.event.inputs.target_branch }}" >> $GITHUB_ENV
+          echo "Selected target branch: ${{ github.event.inputs.target_branch }}"
+      
       - name: Ensure Target Branch Exists
         run: |
-          if git show-ref --verify --quiet refs/remotes/origin/$TARGET_BRANCH; then
+          if git ls-remote --exit-code --heads origin $TARGET_BRANCH; then
             echo "Branch $TARGET_BRANCH exists."
           else
             echo "Branch $TARGET_BRANCH does not exist. Creating..."
             git checkout -b $TARGET_BRANCH
             git push origin $TARGET_BRANCH
           fi
-
+      
       - name: Checkout Target Branch
         run: git checkout $TARGET_BRANCH
 
