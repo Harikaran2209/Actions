@@ -25,6 +25,7 @@ jobs:
     - name: Create Notepad File
       run: |
         echo "Welcome to GitHub Actions" > welcome.txt  # Create welcome.txt
+        echo "Welcome to GitHub Actions (Harikaran2209)" > welcome.txt  # Create welcome.txt
         cat welcome.txt  # Verify content
 
     - name: Commit Changes
