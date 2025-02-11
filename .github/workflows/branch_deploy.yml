@@ -1,49 +1,51 @@
-name: Deploy Code
+name: Auto-Deploy on Commit
 
 on:
-  workflow_dispatch:  # Manual trigger with input
-    inputs:
-      target_branch:
-        description: 'Branch to deploy (default: master)'
-        required: false
-        default: 'Dev'
+  push:
+    branches:
+      - master  # Only trigger when changes happen in master
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all branches
+    - name: Determine Target Branch
+      run: |
+        # Decide target branch based on a condition
+        # Example: If the commit message contains "deploy to test", push to Test
+        # Otherwise, push to Dev
+        TARGET_BRANCH="Dev"
+        if git log -1 --pretty=%B | grep -q "deploy to test"; then
+          TARGET_BRANCH="Test"
+        fi
+        echo "Target branch: $TARGET_BRANCH"
+        echo "TARGET_BRANCH=$TARGET_BRANCH" >> $GITHUB_ENV
 
-      - name: Set Target Branch
-        run: echo "TARGET_BRANCH=${{ github.event.inputs.target_branch || 'Dev' }}" >> $GITHUB_ENV
+    - name: Checkout Repository (master)
+      uses: actions/checkout@v3
+      with:
+        ref: master
 
-      - name: Check if Branch Exists
-        id: check_branch
-        run: |
-          if git ls-remote --heads origin $TARGET_BRANCH | grep $TARGET_BRANCH; then
-            echo "BRANCH_EXISTS=true" >> $GITHUB_ENV
-          else
-            echo "BRANCH_EXISTS=false" >> $GITHUB_ENV
-          fi
+    - name: Pull latest changes
+      run: |
+        git pull origin master --rebase  
 
-      - name: Deploy Code
-        run: |
-          echo "Deploying code to $TARGET_BRANCH branch..."
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Actions"
+    - name: Create Notepad File
+      run: |
+        echo "Welcome to GitHub Actions (Harikaran2209) in $TARGET_BRANCH branch" > welcome.txt  
+        cat welcome.txt  # Verify content
 
-          # Ensure correct branch is checked out
-          if [ "$BRANCH_EXISTS" = "true" ]; then
-            git checkout $TARGET_BRANCH
-          else
-            git checkout -b $TARGET_BRANCH
-          fi
+    - name: Commit Changes
+      run: |
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub Actions"
+        git add welcome.txt
+        git commit -m "Added welcome.txt from master branch commit" || echo "No changes to commit"
 
-          # Commit and push changes
-          git add .
-          git commit -m "Deployed via GitHub Actions"
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/YOUR_USERNAME/YOUR_REPO.git $TARGET_BRANCH
+    - name: Push Changes to Target Branch
+      run: |
+        git checkout -b $TARGET_BRANCH || git checkout $TARGET_BRANCH
+        git pull origin $TARGET_BRANCH --rebase
+        git merge master  # Merge latest changes from master
+        git push origin $TARGET_BRANCH
