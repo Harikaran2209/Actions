@@ -10,11 +10,11 @@ on:
       deploy_dev:
         description: "Deploy to Dev branch (Set to true to deploy)"
         required: false
-        default: "false"
+        default: "true"
       deploy_test:
         description: "Deploy to Test branch (Set to true to deploy)"
         required: false
-        default: "false"
+        default: "true"
 
 jobs:
   deploy:
