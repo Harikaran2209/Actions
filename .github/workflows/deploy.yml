@@ -19,25 +19,25 @@ jobs:
           if [ -f config.json ]; then
             sed -i 's|@url@|${{ secrets.APP_URL }}|' config.json
             cat config.json
-          
+          else
+            echo "Error: config.json not found!"
+            exit 1
+          fi
       - name: Copy index.html to Apache Directory
         run: |
           sudo cp index.html /var/www/html/index.html
           sudo systemctl restart apache2
-
       - name: Commit and Push Changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-
           # Ensure there are changes before committing
           if git diff --quiet; then
             echo "No changes to commit"
             exit 0
           fi
-
           git add config.json
           git commit -m "Updated configuration file dynamically"
           git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Harikaran2209/Actions.git master
