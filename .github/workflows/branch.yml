@@ -1,0 +1,29 @@
+name: Start/Stop Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Choose an action (start or stop)"
+        required: true
+        default: "start"
+        type: choice
+        options:
+          - start
+          - stop
+
+jobs:
+  start-stop:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Action
+        run: |
+          if [ "${{ github.event.inputs.action }}" == "start" ]; then
+            echo "Starting the process..."
+            # Add your start logic here
+          elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
+            echo "Stopping the process..."
+            # Add your stop logic here
+          else
+            echo "Invalid action selected."
+          fi
