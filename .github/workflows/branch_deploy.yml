@@ -11,21 +11,21 @@ jobs:
 
     steps:
     - name: Get the Branch Name
-      run: echo "Deploying changes from $GITHUB_REF_NAME to branch..."
+      run: echo "Deploying changes from $GITHUB_REF_NAME to Dev branch..."
 
     - name: Checkout Repository (master Branch)
       uses: actions/checkout@v3
       with:
-        ref: master  # Always checkout Test branch
+        ref: Dev  # Always checkout Test branch
 
     - name: Pull latest changes
       run: |
-        git pull origin master --rebase  # Pull latest changes before modifying files
+        git pull origin Dev --rebase  # Pull latest changes before modifying files
 
     - name: Create Notepad File
       run: |
         echo "Welcome to GitHub Actions" > welcome.txt  # Create welcome.txt
-        echo "Welcome to GitHub Actions (Harikaran2209) in master" > welcome.txt  # Create welcome.txt
+        echo "Welcome to GitHub Actions (Harikaran2209) in Dev branch" > welcome.txt  # Create welcome.txt
         cat welcome.txt  # Verify content
 
     - name: Commit Changes
@@ -35,6 +35,6 @@ jobs:
         git add welcome.txt
         git commit -m "Added welcome.txt from master branch commit" || echo "No changes to commit"
 
-    - name: Push Changes to master Branch
+    - name: Push Changes to Dev Branch
       run: |
-        git push origin master
+        git push origin Dev
