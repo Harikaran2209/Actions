@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Display Branch Selection
-        run: echo "You selected the branch: ${{ github.event.inputs.target_branch }}"
+        run: echo "You selected the branch:${{ github.event.inputs.target_branch }}"
 
   deploy:
     needs: select-branch  # Waits for branch selection to complete
