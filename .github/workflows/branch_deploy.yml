@@ -1,0 +1,35 @@
+name: Auto-Deploy on Commit
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: "Select branch to deploy (Dev or Test)"
+        required: true
+        default: "master"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set Target Branch
+        run: |
+          TARGET_BRANCH=${{ github.event.inputs.target_branch }}
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> $GITHUB_ENV
+          echo "Selected target branch: $TARGET_BRANCH"
+
+      - name: Checkout Target Branch
+        run: |
+          git checkout -B $TARGET_BRANCH origin/$TARGET_BRANCH || git checkout $TARGET_BRANCH
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add welcome.txt
+          git commit -m "Updated welcome.txt from $TARGET_BRANCH branch" || echo "No changes to commit"
+          git push origin $TARGET_BRANCH
