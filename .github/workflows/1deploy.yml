@@ -1,0 +1,65 @@
+name: Auto Deploy on Commit
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_master:
+        description: "Deploy to master branch (Set to true to deploy)"
+        required: false
+        default: "true"
+      deploy_dev:
+        description: "Deploy to Dev branch (Set to true to deploy)"
+        required: false
+        default: "false"
+      deploy_test:
+        description: "Deploy to Test branch (Set to true to deploy)"
+        required: false
+        default: "false"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Fetch all branches and history
+
+    - name: Determine Target Branch
+      run: |
+        # Default to master
+        TARGET_BRANCH="master"
+
+        # Override based on user input
+        if [[ "${{ github.event.inputs.deploy_dev }}" == "true" ]]; then
+          TARGET_BRANCH="Dev"
+        elif [[ "${{ github.event.inputs.deploy_test }}" == "true" ]]; then
+          TARGET_BRANCH="Test"
+        fi
+
+        echo "TARGET_BRANCH=$TARGET_BRANCH" >> $GITHUB_ENV
+        echo "Deploying to branch: $TARGET_BRANCH"
+
+    - name: Ensure Target Branch Exists
+      run: |
+        git fetch origin
+        if git ls-remote --heads origin $TARGET_BRANCH | grep -q "$TARGET_BRANCH"; then
+          echo "Branch $TARGET_BRANCH exists."
+        else
+          echo "Branch $TARGET_BRANCH does not exist. Exiting..."
+          exit 1
+        fi
+
+    - name: Checkout Target Branch
+      run: git checkout $TARGET_BRANCH
+
+    - name: Commit and Push Changes (if any)
+      run: |
+        git add .
+        if git diff --staged --quiet; then
+          echo "No changes to commit."
+        else
+          git commit -m "Deploying to $TARGET_BRANCH branch"
+          git push origin $TARGET_BRANCH
+        fi
