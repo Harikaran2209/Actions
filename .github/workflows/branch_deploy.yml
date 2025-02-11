@@ -1,49 +1,36 @@
-name: Deploy Code
+name: Auto-Deploy on Commit
 
 on:
-  workflow_dispatch:  # Manual trigger with input
-    inputs:
-      target_branch:
-        description: 'Branch to deploy (default: master)'
-        required: false
-        default: 'Dev'
+  push:
+    branches:
+      - master
+      - Dev
+      - Test
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all branches
+    - name: Get the Branch Name
+      run: echo "Deploying changes from $GITHUB_REF_NAME to Dev branch..."
 
-      - name: Set Target Branch
-        run: echo "TARGET_BRANCH=${{ github.event.inputs.target_branch || 'Dev' }}" >> $GITHUB_ENV
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+      with:
+        ref: ${{ github.ref_name }}
 
-      - name: Check if Branch Exists
-        id: check_branch
-        run: |
-          if git ls-remote --heads origin $TARGET_BRANCH | grep $TARGET_BRANCH; then
-            echo "BRANCH_EXISTS=true" >> $GITHUB_ENV
-          else
-            echo "BRANCH_EXISTS=false" >> $GITHUB_ENV
-          fi
+    - name: Modify the Branch
+      run: |
+        echo "Working in Dev branch"
+        cat index.html
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub Actions"
+        git add .
+        git commit -m "File changes from $GITHUB_REF_NAME -> Dev" || echo "No changes to commit"
 
-      - name: Deploy Code
-        run: |
-          echo "Deploying code to $TARGET_BRANCH branch..."
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Actions"
-
-          # Ensure correct branch is checked out
-          if [ "$BRANCH_EXISTS" = "true" ]; then
-            git checkout $TARGET_BRANCH
-          else
-            git checkout -b $TARGET_BRANCH
-          fi
-
-          # Commit and push changes
-          git add .
-          git commit -m "Deployed via GitHub Actions"
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/YOUR_USERNAME/YOUR_REPO.git $TARGET_BRANCH
+    - name: Push Changes to Dev Branch
+      run: |
+        git branch -M Dev  # Ensure we are on Dev branch
+        git remote set-url origin https://x-access-token:${{ secrets.PAT }}@github.com/Harikaran2209/Dev.git
+        git push origin Dev
