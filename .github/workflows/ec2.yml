@@ -3,24 +3,24 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main  # Change to your deployment branch
+      - master
+  workflow_dispatch:  # Enables manual trigger
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up SSH and deploy
+      - name: Set up SSH Key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-            cd /home/ubuntu/app  # Change to your project directory
-            git pull origin main  # Pull latest changes
-            npm install  # Install dependencies (if using Node.js)
-            systemctl restart nginx  # Restart Nginx (if using)
-          EOF
+          ssh-keyscan -H ${{ secrets.EC2_IP }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        run: |
+          ssh ubuntu@${{ secrets.EC2_IP }} "cd /home/ubuntu/Actions && git pull origin master && ./deploy.sh"
