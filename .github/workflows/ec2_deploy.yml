@@ -1,4 +1,4 @@
-name: Deploy to EC2 with Temporary Security Group
+name: Deploy to EC2 with Existing Security Group
 
 on:
   push:
@@ -20,23 +20,26 @@ jobs:
           echo "PUBLIC_IP=$PUBLIC_IP" >> $GITHUB_ENV
         shell: bash
 
-      - name: Create Security Group
+      - name: Get Existing Security Group ID
         run: |
-          SECURITY_GROUP_ID=$(aws ec2 create-security-group \
-            --group-name "github-actions-sg-$(date +%s)" \
-            --description "Temporary SG for GitHub Actions Deployment" \
-            --vpc-id $(aws ec2 describe-vpcs --query "Vpcs[0].VpcId" --output text) \
-            --query "GroupId" --output text)
+          SECURITY_GROUP_ID=$(aws ec2 describe-security-groups \
+            --group-names "mysecuritygroup" \
+            --query "SecurityGroups[0].GroupId" --output text)
 
           echo "SECURITY_GROUP_ID=$SECURITY_GROUP_ID" >> $GITHUB_ENV
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        shell: bash
 
+      - name: Allow SSH from GitHub Runner
+        run: |
           aws ec2 authorize-security-group-ingress \
-            --group-id $SECURITY_GROUP_ID \
-            --protocol tcp \
-            --port 22 \
-            --cidr ${{ env.PUBLIC_IP }}/32
+            --group-id ${{ env.SECURITY_GROUP_ID }} \
+            --protocol tcp --port 22 --cidr ${{ env.PUBLIC_IP }}/32
 
-          echo "Temporary Security Group Created: $SECURITY_GROUP_ID"
+          echo "SSH access allowed for $PUBLIC_IP"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -51,10 +54,6 @@ jobs:
           ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
         shell: bash
 
-      - name: Test SSH Connection
-        run: ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} "echo Connected Successfully"
-        shell: bash
-
       - name: Deploy to EC2
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
@@ -65,11 +64,14 @@ jobs:
           EOF
         shell: bash
 
-      - name: Delete Temporary Security Group
+      - name: Restrict SSH Access After Deployment
         if: always()
         run: |
-          aws ec2 delete-security-group --group-id ${{ env.SECURITY_GROUP_ID }}
-          echo "Temporary Security Group Deleted: ${{ env.SECURITY_GROUP_ID }}"
+          aws ec2 revoke-security-group-ingress \
+            --group-id ${{ env.SECURITY_GROUP_ID }} \
+            --protocol tcp --port 22 --cidr ${{ env.PUBLIC_IP }}/32
+
+          echo "SSH access revoked for $PUBLIC_IP"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
