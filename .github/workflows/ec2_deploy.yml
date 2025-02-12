@@ -64,13 +64,23 @@ jobs:
           EOF
         shell: bash
 
+      - name: Debug Security Group Before Revoking
+        run: |
+          echo "Current Security Group Rules Before Revoking SSH:"
+          aws ec2 describe-security-groups --group-ids ${{ env.SECURITY_GROUP_ID }} --query "SecurityGroups[0].IpPermissions"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        shell: bash
+
       - name: Restrict SSH Access After Deployment
         if: always()
         run: |
+          echo "Revoking SSH access for $PUBLIC_IP"
           aws ec2 revoke-security-group-ingress \
             --group-id ${{ env.SECURITY_GROUP_ID }} \
-            --protocol tcp --port 22 --cidr ${{ env.PUBLIC_IP }}/32
-
+            --protocol tcp --port 22 --cidr ${{ env.PUBLIC_IP }}/32 || echo "SSH rule might already be removed"
           echo "SSH access revoked for $PUBLIC_IP"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
