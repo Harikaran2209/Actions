@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - master  # Change to your deployment branch
+      - master
   workflow_dispatch:
 
 jobs:
@@ -14,17 +14,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up SSH key
+      - name: Setup SSH Key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.EC2_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H "${{ secrets.EC2_IP }}" > ~/.ssh/known_hosts
+        shell: bash
 
       - name: Deploy to EC2
         run: |
-          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_IP }} << 'EOF'
-            cd /var/www/html  # Change to your deployment directory
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} << 'EOF'
+            cd /var/www/html  # Change to your project directory
             git pull origin master
-            sudo systemctl restart apache2  # Restart Apache (or Nginx if needed)
+            sudo systemctl restart apache2  # Restart Apache or Nginx
           EOF
+        shell: bash
