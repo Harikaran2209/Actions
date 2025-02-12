@@ -1,0 +1,30 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - master  # Change to your deployment branch
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_IP }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        run: |
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_IP }} << 'EOF'
+            cd /var/www/html  # Change to your deployment directory
+            git pull origin master
+            sudo systemctl restart apache2  # Restart Apache (or Nginx if needed)
+          EOF
