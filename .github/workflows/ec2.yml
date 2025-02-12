@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - master  # Change to your deployment branch
+      - main  # Change to your deployment branch
 
 jobs:
   deploy:
@@ -18,10 +18,9 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-            cd /home/ubuntu/app  # Change this to your project directory
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+            cd /home/ubuntu/app  # Change to your project directory
             git pull origin main  # Pull latest changes
             npm install  # Install dependencies (if using Node.js)
             systemctl restart nginx  # Restart Nginx (if using)
-            # Add more deployment commands if needed
           EOF
