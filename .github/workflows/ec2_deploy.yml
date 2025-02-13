@@ -60,7 +60,7 @@ jobs:
             cd /home/ubuntu
             git clone https://github.com/Harikaran2209/Actions.git || (cd Actions && git pull)
             cd Actions
-            ./deploy.sh  # Run your deployment script
+            ./welcome.txt  # Run your deployment script
           EOF
         shell: bash
 
