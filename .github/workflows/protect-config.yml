@@ -1,0 +1,25 @@
+# .github/workflows/protect-config.yml
+name: Protect Actions/config.json
+
+on:
+  pull_request:
+    paths:
+      - 'Actions/config.json'
+    types: [opened, synchronize, reopened]
+
+jobs:
+  revert-config:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Revert Actions/config.json if changed
+        run: |
+          git checkout origin/main -- Actions/config.json
+          git config user.name "bot"
+          git config user.email "bot@example.com"
+          git commit -am "Auto-revert unauthorized change to Actions/config.json"
+          git push origin HEAD:${{ github.head_ref }}
