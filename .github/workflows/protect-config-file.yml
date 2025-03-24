@@ -25,7 +25,7 @@ jobs:
         id: check_diff
         run: |
           git fetch origin
-          if git diff HEAD~1 HEAD --name-only | grep Actions/config.json; then
+          if git diff HEAD~1 HEAD --name-only | grep 'Actions/config.json'; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "changed=false" >> $GITHUB_OUTPUT
@@ -35,13 +35,26 @@ jobs:
         if: github.event_name == 'push' && steps.check_diff.outputs.changed != 'true'
         run: echo "config.json not modified, skipping revert."
 
-      - name: Revert config.json (both push/manual)
+      - name: Debug current repo files (HEAD~1)
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && steps.check_diff.outputs.changed == 'true')
+        run: |
+          echo "Files in HEAD~1:"
+          git ls-tree -r HEAD~1 --name-only
+          echo "Files in current branch:"
+          git ls-tree -r HEAD --name-only
+
+      - name: Safe revert config.json (both push/manual)
         if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && steps.check_diff.outputs.changed == 'true')
         run: |
           git fetch origin
-          git checkout HEAD~1 -- Actions/config.json
+          if git ls-tree -r HEAD~1 --name-only | grep -q 'Actions/config.json'; then
+            echo "Restoring Actions/config.json from HEAD~1"
+            git checkout HEAD~1 -- Actions/config.json
+          else
+            echo "Restoring Actions/config.json from origin/master"
+            git checkout origin/master -- Actions/config.json
+          fi
           git config user.name "config-protect-bot"
           git config user.email "bot@example.com"
-          git commit -m "Auto-revert Actions/config.json to protected state"
+          git commit --allow-empty -m "Auto-revert Actions/config.json to protected state"
           git push origin master
-
