@@ -5,7 +5,7 @@ on:
     branches:
       - master
     paths:
-      - 'Actions/config.json'
+      - 'config.json'
   workflow_dispatch:  # Manual trigger support
 
 jobs:
@@ -47,12 +47,12 @@ jobs:
         if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && steps.check_diff.outputs.changed == 'true')
         run: |
           git fetch origin
-          if git ls-tree -r HEAD~1 --name-only | grep -q 'Actions/config.json'; then
+          if git ls-tree -r HEAD~1 --name-only | grep -q 'config.json'; then
             echo "Restoring Actions/config.json from HEAD~1"
-            git checkout HEAD~1 -- Actions/config.json
+            git checkout HEAD~1 -- config.json
           else
             echo "Restoring Actions/config.json from origin/master"
-            git checkout origin/master -- Actions/config.json
+            git checkout origin/master -- config.json
           fi
           git config user.name "config-protect-bot"
           git config user.email "bot@example.com"
