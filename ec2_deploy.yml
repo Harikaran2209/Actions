@@ -1,0 +1,80 @@
+name: Deploy to EC2 with Temporary SSH Access
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Get GitHub Runner Public IP
+        run: |
+          PUBLIC_IP=$(curl -s https://checkip.amazonaws.com)
+          echo "PUBLIC_IP=$PUBLIC_IP" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Get Security Group ID
+        run: |
+          SECURITY_GROUP_ID=$(aws ec2 describe-security-groups \
+            --group-names "${{ vars.SECURITY_GROUP_NAME }}" \
+            --query "SecurityGroups[0].GroupId" --output text)
+
+          echo "SECURITY_GROUP_ID=$SECURITY_GROUP_ID" >> $GITHUB_ENV
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        shell: bash
+
+      - name: Allow SSH Access
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ env.SECURITY_GROUP_ID }} \
+            --protocol tcp --port 22 --cidr ${{ env.PUBLIC_IP }}/32
+
+          echo "Allowed SSH access for $PUBLIC_IP"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        shell: bash
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+        shell: bash
+
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+            cd /home/ubuntu
+            git clone https://github.com/Harikaran2209/Actions.git || (cd Actions && git pull)
+            cd Actions
+            cat welcome.txt  # Run your deployment script
+          EOF
+        shell: bash
+
+      - name: Restrict SSH Access After Deployment
+        if: always()
+        run: |
+          echo "Revoking SSH access for $PUBLIC_IP"
+          aws ec2 revoke-security-group-ingress \
+            --group-id ${{ env.SECURITY_GROUP_ID }} \
+            --protocol tcp --port 22 --cidr ${{ env.PUBLIC_IP }}/32
+
+          echo "SSH access revoked for $PUBLIC_IP"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        shell: bash
