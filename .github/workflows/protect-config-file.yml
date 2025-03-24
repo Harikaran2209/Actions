@@ -38,8 +38,20 @@ jobs:
       - name: Revert config.json to last known good commit (auto or manual)
         if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && steps.check_diff.outputs.changed == 'true')
         run: |
+          # Ensure Actions/config.json exists
+          if [ ! -f Actions/config.json ]; then
+            echo "ERROR: Actions/config.json does not exist in this repo."
+            exit 1
+          fi
+          
           # Get the most recent commit where config.json was last modified
-          LAST_GOOD_COMMIT=$(git log -n 1 --pretty=format:%H origin/master -- Actions/config.json)
+          LAST_GOOD_COMMIT=$(git log -n 1 --pretty=format:%H origin/master -- Actions/config.json || true)
+          
+          if [ -z "$LAST_GOOD_COMMIT" ]; then
+            echo "No previous commit found for Actions/config.json, skipping revert."
+            exit 0
+          fi
+
           echo "Reverting config.json to commit $LAST_GOOD_COMMIT"
           
           # Safely checkout config.json from that commit
