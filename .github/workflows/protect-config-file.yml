@@ -6,7 +6,7 @@ on:
       - master
     paths:
       - 'Actions/config.json'
-  workflow_dispatch:  # Manual trigger support
+  workflow_dispatch:
 
 jobs:
   protect-config:
@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: master
-          fetch-depth: 0  # Important!
+          fetch-depth: 0
 
       - name: Check if config.json was modified (for push trigger)
         if: github.event_name == 'push'
@@ -35,16 +35,14 @@ jobs:
         if: github.event_name == 'push' && steps.check_diff.outputs.changed != 'true'
         run: echo "config.json not modified, skipping revert."
 
-      - name: Fetch protected-config branch
-        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && steps.check_diff.outputs.changed == 'true')
-        run: git fetch origin protected-config
-
-      - name: Revert config.json from protected-config branch
+      - name: Revert config.json to previous commit (auto or manual)
         if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && steps.check_diff.outputs.changed == 'true')
         run: |
-          git checkout origin/protected-config -- Actions/config.json
+          # Get last commit where config.json was unchanged
+          LAST_GOOD_COMMIT=$(git rev-list HEAD~10 -- Actions/config.json | tail -n 1)
+          git checkout $LAST_GOOD_COMMIT -- Actions/config.json
           git config user.name "config-protect-bot"
           git config user.email "bot@example.com"
           git add Actions/config.json
-          git commit -m "Auto-revert config.json to protected state"
+          git commit -m "Auto-revert config.json to protected state from commit $LAST_GOOD_COMMIT"
           git push origin master
