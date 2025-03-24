@@ -1,6 +1,7 @@
 name: Protect Config File Workflow
 
 on:
+  workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
@@ -37,5 +38,3 @@ jobs:
           git add Actions/config.json
           git commit -m "Protected: Reverted unauthorized changes to Actions/config.json"
           git push origin HEAD:${{ github.head_ref }}
-
-
