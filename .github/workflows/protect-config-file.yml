@@ -1,0 +1,41 @@
+name: Protect Config File Workflow
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - master
+    paths:
+      - 'Actions/config.json'  # <--- Protecting this file
+
+jobs:
+  protect-config:
+    name: Protect config.json
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Check if config.json was modified
+        id: check_diff
+        run: |
+          if git diff --name-only origin/master -- Actions/config.json | grep Actions/config.json; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Revert the file if changed
+        if: steps.check_diff.outputs.changed == 'true'
+        run: |
+          git checkout origin/master -- Actions/config.json
+          git config user.name "config-protect-bot"
+          git config user.email "bot@example.com"
+          git add Actions/config.json
+          git commit -m "Protected: Reverted unauthorized changes to Actions/config.json"
+          git push origin HEAD:${{ github.head_ref }}
+
+
