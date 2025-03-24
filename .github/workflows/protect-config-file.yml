@@ -38,7 +38,7 @@ jobs:
       - name: Revert config.json (both push/manual)
         if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && steps.check_diff.outputs.changed == 'true')
         run: |
-          git checkout -- Actions/config.json
+          git checkout origin/master -- Actions/config.json
           git config user.name "config-protect-bot"
           git config user.email "bot@example.com"
           git commit --allow-empty -m "Auto-revert config.json to protected state"
