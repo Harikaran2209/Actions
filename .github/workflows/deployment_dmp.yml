@@ -1,0 +1,137 @@
+name: Dealmemopro-flowphp_demo
+on:
+  push:
+    branches:
+      - githubactions
+
+  workflow_dispatch:
+    inputs:
+       commit_sha:
+        description: "Commit SHA to deploy"
+        required: false
+        default: ""
+       branch_name:
+          description: "Branch name to checkout"
+          required: false
+          default: ""
+
+jobs:
+  build:
+    if: contains('["Harikaran2209"]', github.actor)
+    runs-on: ubuntu-latest
+    environment: Dealmemopro-flowphp_demo   
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.commit_sha || github.event.inputs.branch_name || github.ref }}
+                  
+      - name: Log deployed ref
+        run: |
+          echo "✅ Deployed $([[ -n '${{ github.event.inputs.commit_sha }}' ]] && echo commit=${{ github.event.inputs.commit_sha }} || echo branch=${{ github.event.inputs.branch_name || github.ref }})"
+          
+          
+                      
+      - name: Config changes
+        run: |
+          #flowphp.configuration
+          sed -i "s|\$source_db_name = '.*';|\$source_db_name = '${{ secrets.DBNAME }}';|" flowphp/public/dmp_config.php
+          sed -i "s|\$source_db_user = '.*';|\$source_db_user = '${{ secrets.DBUSER }}';|" flowphp/public/dmp_config.php
+          sed -i "s|\$source_db_pwd = '.*';|\$source_db_pwd = '${{ secrets.DBPASS }}';|" flowphp/public/dmp_config.php
+          sed -i "s|\$source_db_host = '.*';|\$source_db_host = '${{ secrets.DBHOST }}';|" flowphp/public/dmp_config.php
+          sed -i "s|\$source_db_driver = '.*';|\$source_db_driver = '${{ secrets.DB_DRIVER }}';|" flowphp/public/dmp_config.php
+
+            			
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Syntax check 
+        run: |
+              find -type f -name '*.php' -print0 | xargs -0 -n1 -P$(nproc) php -l -n 
+              find -type f -name '*.ctp' -print0 | xargs -0 -n1 -P$(nproc) php -l -n 
+      - name: Compress
+        run: |
+          mkdir -p /home/runner/${{ github.run_number }}
+          cp -r . /home/runner/${{ github.run_number }}/
+          tar -czf ${{ github.run_number }}.tar.gz -C /home/runner/ ${{ github.run_number }}
+              
+      - name: Set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+            
+      - name: Get runner IP address
+        id: ip
+        uses: haythem/public-ip@v1.3
+          
+      - name: Allow SSH Access
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ secrets.AWS_SECURITY_GROUP_ID }} \
+            --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
+            
+      - name: Copy archive to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER_NAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          source: "${{ github.run_number }}.tar.gz"
+          target: "${{ vars.DEPLOY_DIR }}/pos-${{ github.run_number }}"
+            
+      - name: Executing remote SSH commands using SSH key
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+           host: ${{ secrets.SSH_HOST }}
+           username: ${{ secrets.SSH_USER_NAME }}
+           key: ${{ secrets.SSH_PRIVATE_KEY }}
+           port: 22
+           script: |
+               set -e
+               echo "Change to build directory"
+               cd ${{ vars.ROOT_PATH }}/${{ vars.DEPLOY_DIR }}/flowphp-${{ github.run_number }}
+               pwd
+
+               echo "Unzipping build"
+               unzip -qo ${{ github.run_number }}.zip
+               rm -f ${{ github.run_number }}.zip
+               pwd
+
+               echo "Composer install"
+               cd ${{ vars.ROOT_PATH }}/${{ vars.DEPLOY_DIR }}/flowphp-${{ github.run_number }}/
+               pwd
+               composer install
+
+               echo "Switching traffic to new build"
+               if [ ! -f "${{ vars.ROOT_PATH }}/${{ vars.WEB_DIR }}" ]; then
+               sudo rm -rf ${{ vars.ROOT_PATH }}/${{ vars.WEB_DIR }}
+               sudo ln -s ${{ vars.ROOT_PATH }}/${{ vars.DEPLOY_DIR }}/flowphp-${{ github.run_number }}/ ${{ vars.ROOT_PATH }}/${{ vars.WEB_DIR }}
+               else
+               sudo ln -s ${{ vars.ROOT_PATH }}/${{ vars.DEPLOY_DIR }}/flowphp-${{ github.run_number }}/ ${{ vars.ROOT_PATH }}/${{ vars.WEB_DIR }}
+               fi
+
+               echo "Permission changes"
+               sudo chown dmpusr:dmpgrp ${{ vars.ROOT_PATH }}/${{ vars.DEPLOY_DIR }}/flowphp-${{ github.run_number }} -R
+               sudo chown dmpusr:dmpgrp ${{ vars.ROOT_PATH }}/${{ vars.WEB_DIR }} -R
+
+               echo "Cache reset for php-fpm"
+               cd /home/ubuntu/purge-cache
+               sudo php cachetool.phar opcache:reset --fcgi=/var/run/php/php8.3-fpm-api_dmpapps-live.sock
+
+               echo "Deleting old builds"
+               sudo sh /home/ubuntu/cron-scripts/builddelete.sh 
+              
+      - name: Restrict SSH Access After Deployment
+        run: |
+          echo "Revoking SSH access for $PUBLIC_IP"
+          aws ec2 revoke-security-group-ingress \
+            --group-id ${{ secrets.AWS_SECURITY_GROUP_ID }} \
+            --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
+            
+      
