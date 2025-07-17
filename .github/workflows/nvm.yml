@@ -14,36 +14,30 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Deploy over SSH
-      #uses: appleboy/ssh-action@v1.2.0
+      uses: appleboy/ssh-action@v1.2.0
       with:
-        #host: ${{ secrets.EC2_HOST }}
-        #username: ubuntu
-        #key: ${{ secrets.EC2_SSH_KEY }}
-        #port: 22
-        #script: |
-        #  echo "Setting up environment..."
-
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        port: 22
+        script: |
+          echo "Setting up environment..."
           export NVM_DIR="$HOME/.nvm"
           if [ ! -d "$NVM_DIR" ]; then
             curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
           fi
           source "$NVM_DIR/nvm.sh"
-
           echo "Installing Node and PM2..."
           nvm install 18
           nvm use 18
           npm install -g pm2
-
           #echo "Pulling latest code..."
           #cd ~/my-node-app || git clone https://github.com/<your-username>/<your-repo>.git my-node-app && cd my-node-app
           #git pull origin main
-
           echo "Installing dependencies..."
           npm install
-
           #echo "Running app with PM2..."
           #pm2 start app.js --name my-node-app || pm2 restart my-node-app
           #pm2 save
           #pm2 startup systemd -u ubuntu --hp /home/ubuntu | bash
-
           echo "Deployment complete."
