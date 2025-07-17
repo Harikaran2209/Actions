@@ -1,0 +1,29 @@
+name: Install Node & PM2 via NVM
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup-node-nvm:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up NVM
+        run: |
+          export NVM_DIR="$HOME/.nvm"
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+          source "$NVM_DIR/nvm.sh"
+
+          echo "Installing Node.js 18..."
+          nvm install 18
+          nvm use 18
+
+          echo "Installing PM2 globally..."
+          npm install -g pm2
+
+          echo "Node version: $(node -v)"
+          echo "NPM version: $(npm -v)"
+          echo "PM2 version: $(pm2 -v)"
