@@ -1,43 +1,29 @@
-name: Deploy Node App to AWS EC2
+name: Install Node & PM2 via NVM
 
 on:
-  push:
-    branches: [master]
+  workflow_dispatch:
 
 jobs:
-  deploy:
-    name: Deploy to EC2
+  setup-node-nvm:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Deploy over SSH
-      uses: appleboy/ssh-action@v1.2.0
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.EC2_SSH_KEY }}
-        port: 22
-        script: |
-          echo "Setting up environment..."
+      - name: Set up NVM
+        run: |
           export NVM_DIR="$HOME/.nvm"
-          if [ ! -d "$NVM_DIR" ]; then
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-          fi
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
           source "$NVM_DIR/nvm.sh"
-          echo "Installing Node and PM2..."
+
+          echo "Installing Node.js 18..."
           nvm install 18
           nvm use 18
+
+          echo "Installing PM2 globally..."
           npm install -g pm2
-          #echo "Pulling latest code..."
-          #cd ~/my-node-app || git clone https://github.com/<your-username>/<your-repo>.git my-node-app && cd my-node-app
-          #git pull origin main
-          echo "Installing dependencies..."
-          npm install
-          #echo "Running app with PM2..."
-          #pm2 start app.js --name my-node-app || pm2 restart my-node-app
-          #pm2 save
-          #pm2 startup systemd -u ubuntu --hp /home/ubuntu | bash
-          echo "Deployment complete."
+
+          echo "Node version: $(node -v)"
+          echo "NPM version: $(npm -v)"
+          echo "PM2 version: $(pm2 -v)"
