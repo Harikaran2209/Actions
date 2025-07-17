@@ -1,29 +1,55 @@
-name: Install Node & PM2 via NVM
+name: Install Node Version Manager
 
 on:
-  workflow_dispatch:
+  push:
+    branches: 
+      - master
 
 jobs:
   setup-node-nvm:
     runs-on: ubuntu-latest
+    environment: NVM INSTALLATION
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up NVM
+      - name: Set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+    
+      - name: Get runner IP address
+        id: ip
+        uses: haythem/public-ip@v1.3
+          
+      - name: Allow SSH Access
         run: |
-          export NVM_DIR="$HOME/.nvm"
-          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-          source "$NVM_DIR/nvm.sh"
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ secrets.AWS_SECURITY_GROUP_ID }} \
+            --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32 
 
-          echo "Installing Node.js 18..."
-          nvm install 18
-          nvm use 18
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER_NAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            export NVM_DIR="$HOME/.nvm"
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+            source "$NVM_DIR/nvm.sh"
 
-          echo "Installing PM2 globally..."
-          npm install -g pm2
+            echo "Installing Node.js 18..."
+            nvm install 18
+            nvm use 18
 
-          echo "Node version: $(node -v)"
-          echo "NPM version: $(npm -v)"
-          echo "PM2 version: $(pm2 -v)"
+            echo "Installing PM2 globally..."
+            npm install -g pm2
+
+            echo "Node version: $(node -v)"
+            echo "NPM version: $(npm -v)"
+            echo "PM2 version: $(pm2 -v)"
